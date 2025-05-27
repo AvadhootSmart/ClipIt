@@ -1,9 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=WDXL+Lubrifont+TC&display=swap");
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
+
 @theme inline {
+  /* --font-WDXL: "WDXL Lubrifont TC", sans-serif; */
+  --font-Inter: "Inter", sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
