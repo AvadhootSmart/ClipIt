@@ -105,10 +105,11 @@ func main() {
 		URL := c.Query("url")
 		startTime := c.Query("start")
 		endTime := c.Query("end")
-        video := c.Query("video")
-        audio := c.Query("audio")
+        // video := c.Query("video")
+        // audio := c.Query("audio")
 
-		if URL == "" || startTime == "" || endTime == "" || video == "" || audio == "" {
+		// if URL == "" || startTime == "" || endTime == "" || video == "" || audio == "" {
+        if URL == "" || startTime == "" || endTime == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Bad Request, Missing query parameters ( url, start, end, video, audio )",
 			})
@@ -116,7 +117,7 @@ func main() {
 
 		outputFile := "clip.mp4"
 
-		cmd := exec.Command("yt-dlp", "-f", video+"+"+audio, "--merge-output-format", "mp4", "--download-sections", "*"+startTime+"-"+endTime+"", "--force-keyframes-at-cuts", "--no-playlist", "-o", outputFile, URL)
+		cmd := exec.Command("yt-dlp", "-f", "231+234", "--merge-output-format", "mp4", "--download-sections", "*"+startTime+"-"+endTime+"", "--force-keyframes-at-cuts", "--no-playlist", "-o", outputFile, URL)
 		var out bytes.Buffer
 		var stderr bytes.Buffer
 		cmd.Stdout = &out
