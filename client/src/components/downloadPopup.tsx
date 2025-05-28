@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Download, Play } from "lucide-react";
+import { Download } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface Props {
@@ -43,7 +43,7 @@ export const DownloadPopup = ({
         <Dialog open={showDownloadModal} onOpenChange={setShowDownloadModal}>
             <DialogContent className="sm:max-w-md bg-neutral-900 border-none text-white">
                 <DialogHeader>
-                    <DialogTitle className="text-center text-xl">
+                    <DialogTitle className="text-center text-lg">
                         Your clip is ready!
                     </DialogTitle>
                 </DialogHeader>

@@ -2,23 +2,27 @@ package main
 
 import (
 	"bytes"
-	"path/filepath"
 	// "fmt"
-	// "context"
-	// "encoding/json"
-	"log"
-	// "net/url"
-	// "os"
-	"os/exec"
-	// "time"
+	"path/filepath"
+	// "regexp"
+	"strings"
 
-	// "github.com/go-resty/resty/v2"
+	"log"
+	"os/exec"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 )
+
+type Format struct {
+	ID         string `json:"id"`
+	Extension  string `json:"ext"`
+	Resolution string `json:"resolution"`
+	FPS        string `json:"fps"`
+}
 
 var redisClient = redis.NewClient(&redis.Options{
 	Addr:     "localhost:6379",
@@ -62,27 +66,37 @@ func main() {
 		}
 
 		cmd := exec.Command("yt-dlp", "--list-formats", URL)
-		var out bytes.Buffer
-		var stderr bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Stderr = &stderr
-
 		log.Printf("Running command: %s\n", cmd.String())
-		log.Printf("Command error: %s\n", stderr.String())
 
-		err = cmd.Run()
+		output, err := cmd.Output()
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   "Failed to execute yt-dlp",
-				"details": stderr.String(),
-			})
+			log.Printf("Command error: %s\n", output)
+			panic(err)
 		}
 
-		log.Printf("Command output: %s\n", out.String())
+		formats := parseYtDlpOutput(string(output))
+		// jsonOutput, _ := json.MarshalIndent(formats, "", "  ")
+
+		// fmt.Println(string(jsonOutput))
+		// var out bytes.Buffer
+		// var stderr bytes.Buffer
+		// cmd.Stdout = &out
+		// cmd.Stderr = &stderr
+
+		// err = cmd.Run()
+		// if err != nil {
+		// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		// 		"error":   "Failed to execute yt-dlp",
+		// 		"details": stderr.String(),
+		// 	})
+		// }
+
+		// log.Printf("Command output: %s\n", out.String())
 
 		// Return the command output
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"message": out.String(),
+			// "formats": out.String(),
+			"formats": formats,
 		})
 	})
 
@@ -91,16 +105,18 @@ func main() {
 		URL := c.Query("url")
 		startTime := c.Query("start")
 		endTime := c.Query("end")
+        video := c.Query("video")
+        audio := c.Query("audio")
 
-		if URL == "" || startTime == "" || endTime == "" {
+		if URL == "" || startTime == "" || endTime == "" || video == "" || audio == "" {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": "Bad Request, Missing query parameters ( url, start, end )",
+				"error": "Bad Request, Missing query parameters ( url, start, end, video, audio )",
 			})
 		}
 
 		outputFile := "clip.mp4"
 
-		cmd := exec.Command("yt-dlp", "-f", "231+234", "--merge-output-format", "mp4", "--download-sections", "*"+startTime+"-"+endTime+"", "--force-keyframes-at-cuts", "--no-playlist", "-o", outputFile, URL)
+		cmd := exec.Command("yt-dlp", "-f", video+"+"+audio, "--merge-output-format", "mp4", "--download-sections", "*"+startTime+"-"+endTime+"", "--force-keyframes-at-cuts", "--no-playlist", "-o", outputFile, URL)
 		var out bytes.Buffer
 		var stderr bytes.Buffer
 		cmd.Stdout = &out
@@ -134,6 +150,8 @@ func main() {
 			}
 		}()
 
+		c.Set("Content-Type", "video/mp4")
+		c.Set("Content-Disposition", "attachment; filename=\"ClipIt.mp4\"")
 		return c.SendFile(absPath, true)
 
 		// return c.Status(fiber.StatusOK).JSON(fiber.Map{
@@ -141,7 +159,41 @@ func main() {
 		// })
 	})
 
-	log.Fatal(app.Listen(":8001"))
+	log.Fatal(app.Listen(":8000"))
+}
+
+func parseYtDlpOutput(output string) []Format {
+	lines := strings.Split(output, "\n")
+	var formats []Format
+	startParsing := false
+
+	for _, line := range lines {
+		// Start parsing only after the table separator
+		if strings.HasPrefix(line, "ID") {
+			startParsing = true
+			continue
+		}
+		if !startParsing || strings.TrimSpace(line) == "" || strings.HasPrefix(line, "--") {
+			continue
+		}
+
+		// Split line into fields
+		fields := strings.Fields(line)
+		if len(fields) < 4 {
+			continue
+		}
+
+		format := Format{
+			ID:         fields[0],
+			Extension:  fields[1],
+			Resolution: fields[2],
+			FPS:        fields[3],
+		}
+
+		formats = append(formats, format)
+	}
+
+	return formats
 }
 
 // yt-dlp \\n  -f 231+234 \\n  --merge-output-format mp4 \\n  --download-sections "*20:30-23:40" \\n  --force-keyframes-at-cuts \\n  --no-playlist \\n  -o "clip2.%(ext)s" \\n  "https://www.youtube.com/watch?v=3-ELBiUkUWc"\n
