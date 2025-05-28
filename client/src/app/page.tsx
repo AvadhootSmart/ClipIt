@@ -17,7 +17,7 @@ const page = () => {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [loading, setLoading] = useState(false);
-  const [openDialog, setOpenDialog] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
   const [response, setResponse] = useState(null);
 
   const showTimestamps = url.length > 0;
